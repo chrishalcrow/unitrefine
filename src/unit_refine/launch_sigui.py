@@ -71,7 +71,7 @@ if Path(save_folder / "labels.csv").is_file():
 else:
     decisions = pd.DataFrame(columns=['unit_id', 'quality'])
 
-analyzer = si.load_sorting_analyzer(analyzer_folder)
+analyzer = si.load_sorting_analyzer(analyzer_folder, load_extensions=False)
 
 manual_labels = []
 for unit_id in analyzer.unit_ids:

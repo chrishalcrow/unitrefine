@@ -58,7 +58,7 @@ save_folder.mkdir(exist_ok=True, parents=True)
 
 model_decisions = pd.read_csv(model_predictions_file)
 
-analyzer = si.load_sorting_analyzer(analyzer_folder)
+analyzer = si.load_sorting_analyzer(analyzer_folder, load_extensions=False)
 
 manual_labels = []
 for unit_id in analyzer.unit_ids:
