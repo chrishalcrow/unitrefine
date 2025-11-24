@@ -27,21 +27,17 @@ class UrlInputDialog(QtWidgets.QDialog):
 
         self.setStyleSheet("background-color: '#CBEECB'")
 
-        # --- Layout Setup ---
         layout = QtWidgets.QVBoxLayout()
 
-        # 1. Label
-        self.label =QtWidgets.QLabel("Please enter the s3 path to an analyzer:")
+        self.label = QtWidgets.QLabel("Please enter the s3 path to an analyzer:")
         layout.addWidget(self.label)
 
-        # 2. The Text Input (QLineEdit)
         self.url_input = QtWidgets.QLineEdit()
         self.url_input.setPlaceholderText("https://www.example.com")
-        self.url_input.setClearButtonEnabled(True) # Adds a small 'x' to clear text
+        self.url_input.setClearButtonEnabled(True)
         layout.addWidget(self.url_input)
         self.url_input.setStyleSheet("background-color: '#FFFFFF'")
 
-        # 3. Buttons (OK / Cancel)
         self.button_box = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )
@@ -49,8 +45,6 @@ class UrlInputDialog(QtWidgets.QDialog):
 
         self.setLayout(layout)
 
-        # --- Signal Connections ---
-        # Connect the standard buttons to the dialog's built-in accept/reject methods
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
@@ -108,6 +102,8 @@ class UnitRefineProject:
 
         analyer_in_project = Path(f'analyzers/{new_key}_{Path(directory).name}')
         self.analyzers[new_key] = {'path': directory, 'analyzer_in_project': analyer_in_project}
+
+        print(f"{self.analyzers=}")
 
 
 def load_project(folder_name):
@@ -299,6 +295,9 @@ class MainWindow(QtWidgets.QWidget):
             url = dialog.get_url()
             if is_path_remote(url):
                 self.project.add_analyzer(url)
+                self.project.save()
+                self.make_curation_button_list()
+                self.make_validate_button_list()
             else:
                 print(f"url {url} is not a valid analyzer path.")
 
