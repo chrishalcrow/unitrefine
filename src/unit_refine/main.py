@@ -25,6 +25,8 @@ class UrlInputDialog(QtWidgets.QDialog):
         self.setWindowTitle("Open URL")
         self.setMinimumWidth(400)
 
+        self.setStyleSheet("background-color: '#CBEECB'")
+
         # --- Layout Setup ---
         layout = QtWidgets.QVBoxLayout()
 
@@ -37,6 +39,7 @@ class UrlInputDialog(QtWidgets.QDialog):
         self.url_input.setPlaceholderText("https://www.example.com")
         self.url_input.setClearButtonEnabled(True) # Adds a small 'x' to clear text
         layout.addWidget(self.url_input)
+        self.url_input.setStyleSheet("background-color: '#FFFFFF'")
 
         # 3. Buttons (OK / Cancel)
         self.button_box = QtWidgets.QDialogButtonBox(
