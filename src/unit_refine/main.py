@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QStyleFactory
 from spikeinterface.core import load_sorting_analyzer
 from spikeinterface.curation import auto_label_units
 from unit_refine.train import TrainWindow
-
+from spikeinterface_gui.main import check_folder_is_analyzer
 
 class UnitRefineProject:
 
@@ -269,7 +269,7 @@ class MainWindow(QtWidgets.QWidget):
         if file_dialog.exec():
             selected_directory = file_dialog.selectedFiles()[0]
 
-            if is_an_analyzer(selected_directory):
+            if check_folder_is_analyzer(selected_directory):
 
                 self.project.add_analyzer(selected_directory)
                 self.project.save()
@@ -426,18 +426,6 @@ def main():
     w.setWindowTitle('UnitRefine')
     w.show()
     app.exec()
-
-def is_an_analyzer(directory):
-
-    directory = Path(directory)
-
-    if (directory / "spikeinterface_info.json").is_file():
-        with open(directory / "spikeinterface_info.json") as f:
-            info = json.load(f)
-        if info.get("object") == "SortingAnalyzer":
-            return True
-    
-    return False
 
 def is_a_model(directory):
     return (Path(directory) / "best_model.skops").is_file()
