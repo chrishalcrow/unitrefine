@@ -69,10 +69,7 @@ if '//' not in analyzer_folder:
 project_folder = Path(args.project_folder)
 analyzer_index = int(args.analyzer_index)
 
-if isinstance(analyzer_folder, str):
-    save_folder = project_folder / (f"analyzers/{analyzer_index}_" + analyzer_folder)#analyzer_folder.name)
-else:
-     save_folder = project_folder / (f"analyzers/{analyzer_index}_" + analyzer_folder.name)
+save_folder = project_folder / (f"analyzers/{analyzer_index}_" + Path(analyzer_folder).name)
 
 if Path(save_folder / "labels.csv").is_file():
     decisions = pd.read_csv(save_folder / "labels.csv")
@@ -99,7 +96,7 @@ curation_dict = dict(
 )
 
 controller = Controller(
-        analyzer, backend="qt", curation=True, curation_data=curation_dict
+        analyzer, backend="qt", curation=True, curation_data=curation_dict, skip_extensions=['waveforms', 'principal_components', 'spike_locations']
 )
 
 layout_dict={'zone1': ['unitlist'], 'zone2': [], 'zone3': ['waveform'], 'zone4': ['correlogram'], 'zone5': ['spikeamplitude'], 'zone6': [], 'zone7': [], 'zone8': ['spikerate']}

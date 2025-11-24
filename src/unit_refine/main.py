@@ -417,7 +417,7 @@ class MainWindow(QtWidgets.QWidget):
                 selected_directory_text_display = selected_directory
 
             curate_button = QtWidgets.QPushButton(f'Validate "{selected_directory_text_display}"')
-            curate_button.clicked.connect(partial(self.show_validate_window, analyzer))
+            curate_button.clicked.connect(partial(self.show_validate_window, analyzer, analyzer_index))
             self.validateLayout.addWidget(curate_button,4+analyzer_index,0)
 
     def show_curation_window(self, selected_directory, analyzer_index):
@@ -451,9 +451,9 @@ class MainWindow(QtWidgets.QWidget):
         self.combo_box.addItems(model_names)       
         self.validateLayout.addWidget(self.combo_box,2,0)
 
-    def show_validate_window(self, analyzer):
+    def show_validate_window(self, analyzer, analyzer_index):
 
-        analyzer_path = Path(analyzer['path'])
+        analyzer_path = analyzer['path']
         sorting_analyzer = load_sorting_analyzer(analyzer_path, load_extensions=False)
 
         current_model_name = self.combo_box.currentText()
@@ -472,7 +472,7 @@ class MainWindow(QtWidgets.QWidget):
         print(f"\nLaunching SpikeInterface-GUI to validate automated curation for analyzer at {analyzer_path}...")
         # This will block until the external process closes
         validate_filepath = Path(__file__).absolute().parent / "launch_sigui_validate.py"
-        subprocess.run([sys.executable, validate_filepath, analyzer_path, f'{self.output_folder}', f'{analyzer_in_project}', f'{model_labels_filepath}'])
+        subprocess.run([sys.executable, validate_filepath, analyzer_path, f'{self.output_folder}', f'{analyzer_in_project}', f'{model_labels_filepath}', f'{analyzer_index}'])
         print("SpikeInterface-GUI closed, resuming main app.")
 
 def main():
