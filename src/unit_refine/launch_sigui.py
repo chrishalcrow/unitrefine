@@ -27,8 +27,16 @@ def my_custom_close_handler(event: QCloseEvent, window: QWidget, save_folder, an
         else:
             labels.append(row['labels']['quality'][0])
 
-    qms = analyzer.get_extension("quality_metrics").get_data()
-    tms = analyzer.get_extension("template_metrics").get_data()
+    if analyzer.has_extension('template_metrics'):
+        tms = analyzer.get_extension("template_metrics").get_data()
+    else:
+        tms = pd.DataFrame()
+    
+    if analyzer.has_extension('quality_metrics'):
+        qms = analyzer.get_extension("quality_metrics").get_data()
+    else:
+        qms = pd.DataFrame()
+    
     all_metrics = pd.concat([qms, tms], axis=1)
 
     labels_df = pd.DataFrame()
