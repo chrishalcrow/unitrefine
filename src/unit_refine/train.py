@@ -82,6 +82,15 @@ class TrainWindow(QtWidgets.QMainWindow):
 
         project_folder = project.folder_name
 
+        model_folders_in_project = project.models
+        if len(model_folders_in_project) > 0:
+            model_indices = np.array([int(str(model_path[0].name).split('__')[-1]) for model_path in model_folders_in_project if '__' in str(model_path[0].name)])
+            max_model_index = np.max(model_indices) if len(model_indices) > 0 else 0
+        else:
+            max_model_index = 0
+
+        self.model_name = f"model__{max_model_index + 1}"
+
         train_model_kwargs = {}
 
         window_title_text = "UNITREFINE: Train your model"
@@ -127,7 +136,6 @@ class TrainWindow(QtWidgets.QMainWindow):
 
         metrics_presets["All available"] = self.available_metrics
 
-
         data_text = "Using the following analyzers:<br />"
         for analyzer_dict, metric_data in zip(analyzers_for_training, metrics, strict=True):
 
@@ -159,6 +167,9 @@ class TrainWindow(QtWidgets.QMainWindow):
 
         self.testSizeForm = QtWidgets.QLineEdit("0.2")
         self.testSizeForm.setStyleSheet("background-color: white")
+
+        self.modelNameForm = QtWidgets.QLineEdit(self.model_name)
+        self.modelNameForm.setStyleSheet("background-color: white")
 
         trainButton = QtWidgets.QPushButton("Train models")
         trainButton.clicked.connect(partial(self.do_training, train_model_kwargs, parent_folder, project))
@@ -209,6 +220,9 @@ class TrainWindow(QtWidgets.QMainWindow):
         formLayout.addRow(blank_label)
 
         formLayout.addRow("Test size: ", self.testSizeForm)
+        formLayout.addRow(blank_label)
+
+        formLayout.addRow("Model name: ", self.modelNameForm)
         formLayout.addRow(blank_label)
 
         formLayout.addRow(trainButton)
@@ -277,15 +291,9 @@ class TrainWindow(QtWidgets.QMainWindow):
         scaling_techniques = eval(self.scalarsForm.text())
         classifiers = eval(self.classifiersForm.text())
         test_size = eval(self.testSizeForm.text())
+        self.model_name = self.modelNameForm.text()
 
-        model_folders_in_project = project.models
-        if len(model_folders_in_project) > 0:
-            model_indices = np.array([int(str(model_path[0].name).split('__')[-1]) for model_path in model_folders_in_project if '__' in str(model_path[0].name)])
-            max_model_index = np.max(model_indices) if len(model_indices) > 0 else 0
-        else:
-            max_model_index = 0
-
-        folder = parent_folder / f'model__{max_model_index + 1}'  
+        folder = parent_folder / self.model_name
 
         print("\nUsing UnitRefine, inside SpikeInterface, to train models...\n")
 
