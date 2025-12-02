@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 import shutil
 
+from huggingface_hub import repo_exists
 from modAL.models import ActiveLearner
 from modAL.uncertainty import uncertainty_sampling
 from spikeinterface.curation.model_based_curation import load_model
@@ -173,6 +174,7 @@ class MainWindow(QtWidgets.QWidget):
         self.project = project
 
         self.main_layout = QtWidgets.QGridLayout(self)
+        self.retrainedModelNameForm = None
 
         to_curateWidget = QtWidgets.QWidget()
         to_curateWidget.setStyleSheet("background-color: LightBlue")
@@ -348,7 +350,7 @@ class MainWindow(QtWidgets.QWidget):
 
         if dialog.exec():
             url = dialog.get_url()
-            if is_a_hfh_repo(url):
+            if repo_exists(url):
                 self.project.models = [(url, "hfh")] + self.project.models
                 model_directory = self.project.folder_name / "models" / url.split('/')[-1]
                 model_directory.mkdir(exist_ok=True)
@@ -357,6 +359,9 @@ class MainWindow(QtWidgets.QWidget):
                     output.write(url)
 
                 self.make_model_list()
+
+            else:
+                print(f"Repo {url} does not exist.")
 
     def make_apply_code(self):
 
@@ -569,7 +574,9 @@ class MainWindow(QtWidgets.QWidget):
 
         shutil.copyfile(self.project.selected_model / 'model_info.json', retrained_model_folder / 'model_info.json')
 
-        self.project.models = [(retrained_model_folder, "local")] + self.project.models
+        self.project.models = self.project.models + [(retrained_model_folder, "local")]
+        
+        self.make_model_list()
         
         print(f"balanced accuracy = {learner.score(all_training_data.drop('unit_id', axis=1).values, all_labels['0'].values)=}")
 
@@ -596,13 +603,22 @@ class MainWindow(QtWidgets.QWidget):
         self.w.resize(800, 600)
         self.w.show()
         self.w.update_signal.connect(self.make_model_list)
+        
 
     def make_model_list(self):
         self.combo_box = QtWidgets.QComboBox(self)
+        self.combo_box.currentIndexChanged.connect(self.update_retrained_name)
         model_folders = [Path(model[0]) for model in self.project.models]
         model_names = [model_folder.name for model_folder in model_folders]
         self.combo_box.addItems(model_names)       
         self.validateLayout.addWidget(self.combo_box,2,0,1,3)
+        new_model_index = self.combo_box.count() - 1
+        self.combo_box.setCurrentIndex(new_model_index)
+        self.update_retrained_name()
+
+    def update_retrained_name(self):
+        if self.retrainedModelNameForm is not None:
+            self.retrainedModelNameForm.setText(f"{self.combo_box.currentText()}_retrained")
 
     def show_validate_window(self, analyzer, analyzer_index):
 
@@ -655,9 +671,6 @@ def main():
 
 def is_a_model(directory):
     return (Path(directory) / "best_model.skops").is_file()
-
-def is_a_hfh_repo(url):
-    return True
 
 if __name__ == "__main__":
     main()

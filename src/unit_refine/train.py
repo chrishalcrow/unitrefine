@@ -84,7 +84,7 @@ class TrainWindow(QtWidgets.QMainWindow):
 
         model_folders_in_project = project.models
         if len(model_folders_in_project) > 0:
-            model_indices = np.array([int(str(model_path[0].name).split('__')[-1]) for model_path in model_folders_in_project if '__' in str(model_path[0].name)])
+            model_indices = np.array([int(str(model_path[0].name).split('__')[-1][0]) for model_path in model_folders_in_project if '__' in str(model_path[0].name)])
             max_model_index = np.max(model_indices) if len(model_indices) > 0 else 0
         else:
             max_model_index = 0
