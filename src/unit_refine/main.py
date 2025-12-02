@@ -351,9 +351,12 @@ class MainWindow(QtWidgets.QWidget):
         if dialog.exec():
             url = dialog.get_url()
             if repo_exists(url):
-                self.project.models = [(url, "hfh")] + self.project.models
+                self.project.models = self.project.models + [(url.split('/')[-1], "hfh")]
                 model_directory = self.project.folder_name / "models" / url.split('/')[-1]
                 model_directory.mkdir(exist_ok=True)
+
+                from huggingface_hub import snapshot_download
+                snapshot_download(url, local_dir=model_directory)
 
                 with open(model_directory / 'hfh_path.txt', 'w') as output:
                     output.write(url)

@@ -316,7 +316,6 @@ class TrainWindow(QtWidgets.QMainWindow):
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
-
         project.models.append((folder, "local"))
 
         print(f"\nFinished training models! Best model saved in in {folder}.\n")

@@ -68,10 +68,7 @@ sorting_analyzer = si.load_sorting_analyzer(analyzer_folder, load_extensions=Fal
 
 print("\nUsing UnitRefine to label the units in your analyzer...\n")
 
-if hfh_or_local == "local":
-    model_decisions = auto_label_units(sorting_analyzer=sorting_analyzer, model_folder=model_folder, trust_model=True)
-else:
-    model_decisions = auto_label_units(sorting_analyzer=sorting_analyzer, repo_id=model_folder, trust_model=True)
+model_decisions = auto_label_units(sorting_analyzer=sorting_analyzer, model_folder=model_folder, trust_model=True)
 
 model_labels_filepath = f"{project_folder / analyzer_in_project / f'labels_from_{current_model_name}.csv'}"
 model_decisions.to_csv(model_labels_filepath, index_label="unit_id")
