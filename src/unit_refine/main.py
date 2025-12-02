@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 import shutil
 
+import numpy as np
 import pandas as pd
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5.QtCore import Qt
@@ -14,7 +15,6 @@ from PyQt5.QtWidgets import QStyleFactory
 from unit_refine.train import TrainWindow
 from spikeinterface_gui.main import check_folder_is_analyzer
 from spikeinterface.core.core_tools import is_path_remote
-
 
 class UrlInputDialog(QtWidgets.QDialog):
     def __init__(self, parent=None, default=None, background_color=None):
@@ -153,7 +153,6 @@ def load_project(folder_name):
 
     return project
 
-
 class MainWindow(QtWidgets.QWidget):
 
     def __init__(self, project):
@@ -268,21 +267,53 @@ class MainWindow(QtWidgets.QWidget):
 
         trainTitleWidget = QtWidgets.QLabel("Choose your model:")
         #trainTitleWidget.setStyleSheet("font-weight: bold; font-size: 20pt;")
-        self.validateLayout.addWidget(trainTitleWidget,1,0)
+        self.validateLayout.addWidget(trainTitleWidget,1,0,1,3)
+
+        trainTitleWidget = QtWidgets.QLabel("And validate it on an analyzer:")
+        #trainTitleWidget.setStyleSheet("font-weight: bold; font-size: 20pt;")
+        self.validateLayout.addWidget(trainTitleWidget,3,0,1,3)
 
         self.make_model_list()
-
-        trainTitleWidget = QtWidgets.QLabel("And try it on an analyzer:")
-        #trainTitleWidget.setStyleSheet("font-weight: bold; font-size: 20pt;")
-        self.validateLayout.addWidget(trainTitleWidget,3,0)
-
         self.make_validate_button_list()
 
         validateWidget.setLayout(self.validateLayout)
+        self.main_layout.addWidget(saWidget)
+        self.main_layout.addWidget(trainWidget)
+        self.main_layout.addWidget(validateWidget)
+
+        #################
+        # RETRAIN WIDGET
+        ##################
+
+        retrainWidget = QtWidgets.QWidget()
+        retrainWidget.setStyleSheet("background-color: LightYellow")
+
+        self.retrainLayout = QtWidgets.QGridLayout()
+
+        retrainTitleWidget = QtWidgets.QLabel("5. RE-TRAIN")
+        retrainTitleWidget.setStyleSheet("font-weight: bold; font-size: 20pt;")
+        self.retrainLayout.addWidget(retrainTitleWidget,0,0,1,2)
+
+        retrain_text = QtWidgets.QLabel("Retrained model name: ")
+        self.retrainLayout.addWidget(retrain_text,1,0,1,1)
+
+        current_model_name = self.combo_box.currentText()
+        self.retrainedModelNameForm = QtWidgets.QLineEdit(f"{current_model_name}_retrained")
+        self.retrainedModelNameForm.setStyleSheet("background-color: white")
+        self.retrainLayout.addWidget(self.retrainedModelNameForm,1,1,1,1)
+
+        retrain_button = QtWidgets.QPushButton('Retrain model')
+        retrain_button.clicked.connect(partial(self.retrain_model))
+        self.retrainLayout.addWidget(retrain_button,2,0,1,2)
+
+        retrainWidget.setLayout(self.retrainLayout)
+
 
         self.main_layout.addWidget(saWidget)
         self.main_layout.addWidget(trainWidget)
         self.main_layout.addWidget(validateWidget)
+        self.main_layout.addWidget(retrainWidget)
+
 
         ###############
         # CODE BUTTON
@@ -442,20 +473,83 @@ class MainWindow(QtWidgets.QWidget):
 
             curate_button = QtWidgets.QPushButton(f'Validate "{selected_directory_text_display}"')
             curate_button.clicked.connect(partial(self.show_validate_window, analyzer, analyzer_index))
-            self.validateLayout.addWidget(curate_button,4+analyzer_index,0)
+            self.validateLayout.addWidget(curate_button,4+analyzer_index,0,1,3)
+
+    def retrain_model(self):
+
+        from modAL.models import ActiveLearner
+        from modAL.uncertainty import uncertainty_sampling
+        from spikeinterface.curation.model_based_curation import load_model
+
+        current_model_name = self.combo_box.currentText()
+        self.project.selected_model, hfh_or_local = [model for model in self.project.models if str(current_model_name) in str(model[0])][0]
+
+        model, model_info = load_model(
+            model_folder=self.project.selected_model, trust_model=True
+        )
+        model_metric_names = model.feature_names_in_
+        model_imputer = model['imputer']
+        model_scaler = model['scaler']
+
+        X_training = pd.read_csv(Path(self.project.selected_model) / 'training_data.csv').drop('unit_id', axis=1).values
+        Y_training = pd.read_csv(Path(self.project.selected_model) / 'labels.csv').drop('unit_index', axis=1).values
+
+        learner = ActiveLearner(
+            estimator=model['classifier'],                    
+            query_strategy=uncertainty_sampling,   # Query strategy: select most uncertain samples
+            X_training=X_training,              
+            y_training=Y_training.ravel()          
+        )
+
+        X_new = []
+        y_new = []
+        for analyzer_name in self.project.analyzers:
+
+            folder_name = self.project.folder_name
+            save_path = Path(folder_name / "analyzers" / f"analyzer_{analyzer_name}")
+
+            relabelled_units = pd.read_csv(save_path / f"relabelled_units_{self.project.selected_model.name}.csv")
+            all_metrics = pd.read_csv(save_path / "all_metrics.csv")
+            original_labels = pd.read_csv(save_path / "labels.csv")
+
+            all_metrics = all_metrics[np.concat([model_metric_names, ['unit_id']])]
+
+            y_new_with_unit_ids = []
+            for _, relabelled_unit in relabelled_units.iterrows():
+                if relabelled_unit['unit_id'] in original_labels['unit_id'].values:
+                    print(f"Nothing new for {relabelled_unit['unit_id']}")
+                    if relabelled_unit['quality'] != original_labels.query(f"unit_id == {relabelled_unit['unit_id']}")['quality'].values[0]:
+                        y_new_with_unit_ids.append([relabelled_unit['quality'], relabelled_unit['unit_id']])
+                        print(f"A contradiction for {relabelled_unit['unit_id']}!! Let's update X_training")
+                else:
+                    print(f"New info for {relabelled_unit['unit_id']}")
+                    y_new_with_unit_ids.append([relabelled_unit['quality'], relabelled_unit['unit_id']])
+
+
+            for quality, unit_id in y_new_with_unit_ids:
+                X_new.append(all_metrics.query(f'unit_id == {unit_id}').drop('unit_id', axis=1).values[0])
+                print(f"{all_metrics.query(f'unit_id == {unit_id}').drop('unit_id', axis=1).values[0]=}")
+                y_new.append(quality)
+
+        from sklearn.impute import KNNImputer
+        imputer = KNNImputer(keep_empty_features=True)
+        X_imputed = imputer.fit_transform(X_new)
+        X_imputed_and_scaled = model_scaler.fit_transform(X_imputed)
+
+
+        learner.teach(X_imputed_and_scaled, y_new)
+
 
     def show_curation_window(self, selected_directory, analyzer_index):
 
         self.change_labels_button.setReadOnly(True)
         self.change_labels_button.setStyleSheet("background-color: LightBlue")
 
-        print(f"{selected_directory=}")
-
         analyzer_path = selected_directory
 
-
-
         print(f"\nLaunching SpikeInterface-GUI to curate analyzer at {analyzer_path}...")
+        print("Label units as noise, good and MUA by pressing 'n', 'g' and 'm' on your keyboard.")
+
         curate_filepath = Path(__file__).absolute().parent / "launch_sigui.py"
         subprocess.run([sys.executable, curate_filepath, analyzer_path, f'{self.output_folder}', f'{analyzer_index}'])
         print("SpikeInterface-GUI closed, resuming main app.\n")
@@ -473,17 +567,13 @@ class MainWindow(QtWidgets.QWidget):
         model_folders = [Path(model[0]) for model in self.project.models]
         model_names = [model_folder.name for model_folder in model_folders]
         self.combo_box.addItems(model_names)       
-        self.validateLayout.addWidget(self.combo_box,2,0)
+        self.validateLayout.addWidget(self.combo_box,2,0,1,3)
 
     def show_validate_window(self, analyzer, analyzer_index):
 
         analyzer_path = analyzer['path']
         
         current_model_name = self.combo_box.currentText()
-        if len(self.project.models) == 0:
-            print("\nNo models in project. Please train one, or add one.\n")
-            return
-
         self.project.selected_model, hfh_or_local = [model for model in self.project.models if str(current_model_name) in str(model[0])][0]
 
         analyzer_in_project = analyzer['analyzer_in_project']
@@ -494,8 +584,6 @@ class MainWindow(QtWidgets.QWidget):
 
 def main():
         
-
-    
     parser = ArgumentParser(
         description="UnitRefine - curate your sorting and create a machine learning model based on your curation."
     )

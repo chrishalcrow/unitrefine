@@ -12,7 +12,7 @@ from spikeinterface_gui.backend_qt import QtMainWindow
 from spikeinterface_gui.controller import Controller
 from spikeinterface.curation import auto_label_units
 
-def my_custom_close_handler(event: QCloseEvent, window: QWidget, project_folder, save_folder, analyzer):
+def my_custom_close_handler(event: QCloseEvent, window: QWidget, project_folder, save_folder, analyzer, model_name):
     """
     This function will be called instead of the original closeEvent.
     """
@@ -35,7 +35,7 @@ def my_custom_close_handler(event: QCloseEvent, window: QWidget, project_folder,
     labels_df['unit_id'] = re_labelled_unit_ids
     labels_df = labels_df.sort_values('unit_id')
 
-    labels_df.to_csv(save_folder / "relabelled_units.csv", index=False)
+    labels_df.to_csv(save_folder / f"relabelled_units_{model_name}.csv", index=False)
 
 argv = sys.argv[1:]
 
@@ -113,10 +113,13 @@ controller = Controller(
 layout_dict={'zone1': ['unitlist'], 'zone2': [], 'zone3': ['waveform'], 'zone4': ['correlogram'], 'zone5': ['spikeamplitude'], 'zone6': [], 'zone7': [], 'zone8': ['spikerate']}
 
 print(f"\nLaunching SpikeInterface-GUI to validate automated curation for analyzer at {analyzer_folder}...")
+print("Re-label units as noise, good and MUA by pressing 'n', 'g' and 'm' on your keyboard.")
+
+model_name = model_folder.split('/')[-1]
 
 app = mkQApp()
 win = QtMainWindow(controller, layout_dict=layout_dict, user_settings=None)
-win.closeEvent = functools.partial(my_custom_close_handler, window=win, project_folder=project_folder, save_folder=save_folder, analyzer=sorting_analyzer)
+win.closeEvent = functools.partial(my_custom_close_handler, window=win, project_folder=project_folder, save_folder=save_folder, analyzer=sorting_analyzer, model_name=model_name)
 
 win.show()
 app.exec()

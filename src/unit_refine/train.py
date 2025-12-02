@@ -282,8 +282,6 @@ class TrainWindow(QtWidgets.QMainWindow):
     # --- This is the specific method you requested ---
     def remove_metric_from_list(self, metric_name):
         self.metric_names = [existing_metric_name for existing_metric_name in self.metric_names if existing_metric_name != metric_name]
-        print(f"Logic executed: Metric '{metric_name}' was removed from the data structure.")
-        # Add your backend logic here (e.g., updating a database or list variable)
 
     def do_training(self, train_model_kwargs, parent_folder, project):
 
